@@ -7,7 +7,7 @@
 - 💾 可另存為獨立 HTML 檔案
 
 ## 使用方式
-直接開啟 HTML 檔案，或訪問：[線上版本連結]
+直接開啟 HTML 檔案，或訪問：[[線上版本連結]](https://kevinzheng81.github.io/csv_plotter_webapp/csv_plotter_webapp.html)
 
 ## 技術說明
 - 純前端應用，所有資料處理都在本地完成
