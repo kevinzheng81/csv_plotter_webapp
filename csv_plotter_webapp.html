@@ -631,16 +631,23 @@
                 }
             }
             
-            currentTraces = yColumns.map((colName, idx) => ({
-                x: xData,
-                y: yDataSets[idx],
-                mode: 'lines',
-                name: colName,
-                line: {
-                    width: 2
-                },
-                hovertemplate: `<b>%{fullData.name}</b><br>X: %{x:.4f}<br>Y: %{y:.4f}<extra></extra>`
-            }));
+            currentTraces = yColumns.map((colName, idx) => {
+                // 檢查列名是否包含 "spec"（不區分大小寫）
+                const isSpec = colName.toLowerCase().includes('spec');
+                
+                return {
+                    x: xData,
+                    y: yDataSets[idx],
+                    mode: 'lines',
+                    name: colName,
+                    line: {
+                        width: 2,
+                        color: isSpec ? '#FF1493' : undefined,  // 深粉紅色 (DeepPink)
+                        dash: isSpec ? 'dash' : 'solid'         // 虛線或實線
+                    },
+                    hovertemplate: `<b>%{fullData.name}</b><br>X: %{x:.4f}<br>Y: %{y:.4f}<extra></extra>`
+                };
+            });
             
             currentLayout = {
                 xaxis: {
