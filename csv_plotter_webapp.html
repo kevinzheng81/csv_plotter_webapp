@@ -383,6 +383,7 @@
                 <div class="sidebar-section">
                     <h3>💾 另存檔案</h3>
                     <button class="apply-btn" id="saveHTML" style="background: #28a745;">另存為 HTML</button>
+                    <button class="apply-btn" id="saveJPG" style="background: #17a2b8; margin-top: 5px;">另存為 JPG</button>
                     <div id="saveStatus" style="font-size: 0.85em; color: #666; margin-top: 10px; min-height: 20px;"></div>
                 </div>
             </div>
@@ -477,10 +478,10 @@
             // 根據模式更新 hovertemplate
             var newHoverTemplate;
             if (mode === 'x') {
-                // X Marker 模式：框內顯示 Y數值，框外顯示圖例名
+                // X Marker 模式：框內顯示 Y數值,框外顯示圖例名
                 newHoverTemplate = '%{y:.6f}<extra>%{fullData.name}</extra>';
             } else if (mode === 'y') {
-                // Y Marker 模式：框內顯示 X數值，框外顯示圖例名
+                // Y Marker 模式：框內顯示 X數值,框外顯示圖例名
                 newHoverTemplate = '%{x:.6f}<extra>%{fullData.name}</extra>';
             } else {
                 // 其他模式：顯示完整資訊
@@ -545,8 +546,9 @@
             }
         });
 
-        // 另存為 HTML
+        // 另存為 HTML 和 JPG
         const saveHTMLBtn = document.getElementById('saveHTML');
+        const saveJPGBtn = document.getElementById('saveJPG');
         const saveStatus = document.getElementById('saveStatus');
         
         saveHTMLBtn.addEventListener('click', () => {
@@ -555,6 +557,15 @@
                 return;
             }
             saveAsNewHTML();
+        });
+
+        // 另存為 JPG
+        saveJPGBtn.addEventListener('click', () => {
+            if (!dataLoaded) {
+                updateSaveStatus('請先載入 CSV 檔案');
+                return;
+            }
+            saveAsJPG();
         });
 
         fileInput.addEventListener('change', function(e) {
@@ -779,6 +790,57 @@
                         saveStatus.textContent = '';
                     }
                 }, 3000);
+            }
+        }
+
+        function saveAsJPG() {
+            try {
+                updateSaveStatus('正在生成 JPG 圖片...');
+                
+                // 準備檔名
+                const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,'-').replace('T','_');
+                const filename = `${originalFileName || 'chart'}_${timestamp}`;
+                
+                // 獲取當前標題
+                const currentTitle = chartTitle.textContent || originalFileName || '圖表';
+                
+                // 暫時添加標題到圖表
+                Plotly.relayout(plotDiv, {
+                    'title': {
+                        text: currentTitle,
+                        font: {
+                            size: 20,
+                            color: '#333',
+                            family: 'Arial, sans-serif'
+                        },
+                        x: 0.5,
+                        xanchor: 'center'
+                    }
+                }).then(() => {
+                    // 使用 Plotly 的 downloadImage 功能匯出 JPG
+                    return Plotly.downloadImage(plotDiv, {
+                        format: 'jpeg',
+                        width: 1280,
+                        height: 720,
+                        filename: filename
+                    });
+                }).then(() => {
+                    // 匯出完成後移除標題（恢復原狀）
+                    return Plotly.relayout(plotDiv, {
+                        'title': null
+                    });
+                }).then(() => {
+                    updateSaveStatus('JPG 圖片已成功保存：' + filename + '.jpeg');
+                }).catch((error) => {
+                    updateSaveStatus('保存 JPG 失敗：' + error.message);
+                    console.error('Error saving JPG:', error);
+                    // 發生錯誤也要移除標題
+                    Plotly.relayout(plotDiv, {'title': null});
+                });
+                
+            } catch (error) {
+                updateSaveStatus('保存 JPG 失敗：' + error.message);
+                console.error('Error saving JPG:', error);
             }
         }
 
