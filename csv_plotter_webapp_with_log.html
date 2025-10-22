@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 資料圖表顯示</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 0;
+        }
+        
+        .controls {
+            padding: 20px 30px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        
+        .file-input-wrapper {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            font-size: 1em;
+            color: #666;
+        }
+        
+        .file-info.active {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .title-container {
+            padding: 15px 30px 0 30px;
+            text-align: center;
+        }
+
+        #chartTitle {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            padding: 10px;
+            border: 2px solid transparent;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        #chartTitle:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        #titleInput {
+            display: none;
+            font-size: 1.5em;
+            font-weight: bold;
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            text-align: center;
+            outline: none;
+            min-width: 300px;
+        }
+
+        #titleInput.active {
+            display: inline-block;
+        }
+
+        .main-content {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #dee2e6;
+            display: none;
+        }
+
+        .sidebar.active {
+            display: block;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-section h3 {
+            font-size: 1em;
+            color: #333;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .hover-control {
+            margin-bottom: 15px;
+        }
+
+        .hover-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .hover-button {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+        }
+
+        .hover-button:hover {
+            background: #f0f0ff;
+        }
+
+        .hover-button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .axis-control {
+            margin-bottom: 15px;
+        }
+
+        .axis-control label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 0.95em;
+        }
+
+        .range-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .range-inputs input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .range-inputs input::placeholder {
+            color: #999;
+            font-size: 0.85em;
+        }
+
+        .apply-btn {
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .apply-btn:hover {
+            background: #5568d3;
+        }
+
+        .chart-container {
+            flex: 1;
+            min-width: 0;
+            max-width: calc(100% - 300px);
+        }
+        
+        #plotDiv {
+            width: calc(100% - 20px);
+            max-width: 100%;
+            height: 700px;
+            padding: 20px 10px 20px 20px;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 700px;
+            color: #999;
+        }
+        
+        .empty-state svg {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .empty-state p {
+            font-size: 1.3em;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .error {
+            display: none;
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #c33;
+        }
+        
+        .error.active {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                max-width: 100%;
+            }
+            .chart-container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 CSV 資料圖表顯示器</h1>
+        </div>
+        
+        <div class="controls">
+            <div class="file-input-wrapper">
+                <button class="btn">📁 選擇 CSV 檔案</button>
+                <input type="file" id="fileInput" accept=".csv">
+            </div>
+            <div class="file-info" id="fileInfo">尚未選擇檔案</div>
+        </div>
+        
+        <div class="loading" id="loading">⏳ 正在載入資料...</div>
+        <div class="error" id="error"></div>
+
+        <div class="title-container">
+            <div id="chartTitle" style="display: none;">圖表標題 (雙擊編輯)</div>
+            <input type="text" id="titleInput" value="圖表標題">
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar" id="sidebar">
+                <!-- Hover 模式控制 -->
+                <div class="sidebar-section">
+                    <h3>🎯 滑鼠懸停模式</h3>
+                    <div class="hover-control">
+                        <div class="hover-buttons">
+                            <button id="hoverClosest" class="hover-button active" onclick="setHoverMode('closest')">最近數據</button>
+                            <button id="hoverX" class="hover-button" onclick="setHoverMode('x')">X Marker</button>
+                            <button id="hoverY" class="hover-button" onclick="setHoverMode('y')">Y Marker</button>
+                            <button id="hoverFalse" class="hover-button" onclick="setHoverMode(false)">關閉懸停</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 座標軸類型 -->
+                <div class="sidebar-section">
+                    <h3>📐 座標軸類型</h3>
+                    <div class="axis-control">
+                        <label>X 軸</label>
+                        <div class="hover-buttons">
+                            <button id="xLinear" class="hover-button active" onclick="setAxisScale('x', 'linear')">線性</button>
+                            <button id="xLog" class="hover-button" onclick="setAxisScale('x', 'log')">對數</button>
+                        </div>
+                    </div>
+                    <div class="axis-control">
+                        <label>Y 軸</label>
+                        <div class="hover-buttons">
+                            <button id="yLinear" class="hover-button active" onclick="setAxisScale('y', 'linear')">線性</button>
+                            <button id="yLog" class="hover-button" onclick="setAxisScale('y', 'log')">對數</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 軸範圍設定 -->
+                <div class="sidebar-section">
+                    <h3>📏 軸範圍設定</h3>
+                    <div class="axis-control">
+                        <label>X 軸範圍</label>
+                        <div class="range-inputs">
+                            <input type="text" id="xMin" placeholder="最小值 (例: 1m, 500u, 1.5n)" step="any">
+                            <input type="text" id="xMax" placeholder="最大值 (例: 10m, 2u, 5n)" step="any">
+                        </div>
+                    </div>
+                    <div class="axis-control">
+                        <label>Y 軸範圍</label>
+                        <div class="range-inputs">
+                            <input type="number" id="yMin" placeholder="最小值" step="any">
+                            <input type="number" id="yMax" placeholder="最大值" step="any">
+                        </div>
+                    </div>
+                    <button class="apply-btn" id="applyRange">套用範圍</button>
+                    <button class="apply-btn" id="resetRange" style="background: #6c757d; margin-top: 5px;">重設範圍</button>
+                </div>
+
+                <!-- 另存檔案 -->
+                <div class="sidebar-section">
+                    <h3>💾 另存檔案</h3>
+                    <button class="apply-btn" id="saveHTML" style="background: #28a745;">另存為 HTML</button>
+                    <button class="apply-btn" id="saveJPG" style="background: #17a2b8; margin-top: 5px;">另存為 JPG</button>
+                    <div id="saveStatus" style="font-size: 0.85em; color: #666; margin-top: 10px; min-height: 20px;"></div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div id="plotContainer">
+                    <div class="empty-state" id="emptyState">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            <path d="M3 10h18M3 14h18"/>
+                        </svg>
+                        <p>請選擇 CSV 檔案開始</p>
+                    </div>
+                    <div id="plotDiv"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const plotDiv = document.getElementById('plotDiv');
+        const emptyState = document.getElementById('emptyState');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const chartTitle = document.getElementById('chartTitle');
+        const titleInput = document.getElementById('titleInput');
+        const sidebar = document.getElementById('sidebar');
+
+        // 軸範圍輸入
+        const xMin = document.getElementById('xMin');
+        const xMax = document.getElementById('xMax');
+        const yMin = document.getElementById('yMin');
+        const yMax = document.getElementById('yMax');
+        const applyRange = document.getElementById('applyRange');
+        const resetRange = document.getElementById('resetRange');
+
+        let currentLayout = null;
+        let currentTraces = null;
+        let currentConfig = null;
+        let dataLoaded = false;
+        let originalFileName = '';
+        let isEmbeddedVersion = false;
+        let currentXAxisType = 'linear';  // 當前 X 軸類型
+        let currentYAxisType = 'linear';  // 當前 Y 軸類型
+
+        // 標題編輯功能
+        chartTitle.addEventListener('dblclick', function() {
+            chartTitle.style.display = 'none';
+            titleInput.classList.add('active');
+            titleInput.value = chartTitle.textContent;
+            titleInput.focus();
+            titleInput.select();
+        });
+
+        titleInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                finishEditingTitle();
+            }
+        });
+
+        titleInput.addEventListener('blur', function() {
+            finishEditingTitle();
+        });
+
+        function finishEditingTitle() {
+            chartTitle.textContent = titleInput.value || '圖表標題';
+            chartTitle.style.display = 'inline-block';
+            titleInput.classList.remove('active');
+        }
+
+        // 座標軸類型切換功能
+        function setAxisScale(axis, type) {
+            // 更新按鈕狀態
+            if (axis === 'x') {
+                document.getElementById('xLinear').classList.remove('active');
+                document.getElementById('xLog').classList.remove('active');
+                if (type === 'linear') {
+                    document.getElementById('xLinear').classList.add('active');
+                } else {
+                    document.getElementById('xLog').classList.add('active');
+                }
+                currentXAxisType = type;
+            } else if (axis === 'y') {
+                document.getElementById('yLinear').classList.remove('active');
+                document.getElementById('yLog').classList.remove('active');
+                if (type === 'linear') {
+                    document.getElementById('yLinear').classList.add('active');
+                } else {
+                    document.getElementById('yLog').classList.add('active');
+                }
+                currentYAxisType = type;
+            }
+            
+            if (!dataLoaded || !plotDiv || !window.Plotly) return;
+            
+            // 取得當前的軸標題
+            const currentLayout = plotDiv.layout;
+            const axisKey = axis + 'axis';
+            const currentTitle = currentLayout[axisKey].title;
+            
+            // 根據軸類型建立完整的軸配置
+            var update = {};
+            
+            if (type === 'log') {
+                // 對數軸配置
+                update[axisKey] = {
+                    type: 'log',
+                    title: currentTitle,
+                    dtick: 1,
+                    exponentformat: 'power',
+                    minor: {
+                        ticklen: 4,
+                        tickcolor: '#e0e0e0',
+                        showgrid: true,
+                        gridcolor: '#f0f0f0',
+                        gridwidth: 0.5
+                    },
+                    showgrid: true,
+                    gridcolor: '#e0e0e0',
+                    showspikes: false
+                };
+                
+                // 保留 X 軸的 domain 設定
+                if (axis === 'x') {
+                    update[axisKey].domain = [0, 0.95];
+                }
+            } else {
+                // 線性軸配置 - 恢復預設設定
+                update[axisKey] = {
+                    type: 'linear',
+                    title: currentTitle,
+                    showgrid: true,
+                    gridcolor: '#e0e0e0',
+                    showspikes: false,
+                    autorange: true
+                };
+                
+                // 保留 X 軸的 domain 設定
+                if (axis === 'x') {
+                    update[axisKey].domain = [0, 0.95];
+                }
+            }
+            
+            Plotly.relayout(plotDiv, update);
+        }
+
+        // Hover 模式功能
+        function setHoverMode(mode) {
+            // 清除所有按鈕的 active 狀態
+            document.getElementById('hoverClosest').classList.remove('active');
+            document.getElementById('hoverX').classList.remove('active');
+            document.getElementById('hoverY').classList.remove('active');
+            document.getElementById('hoverFalse').classList.remove('active');
+            
+            // 設置對應按鈕為 active 狀態
+            if (mode === 'closest') {
+                document.getElementById('hoverClosest').classList.add('active');
+            } else if (mode === 'x') {
+                document.getElementById('hoverX').classList.add('active');
+            } else if (mode === 'y') {
+                document.getElementById('hoverY').classList.add('active');
+            } else {
+                document.getElementById('hoverFalse').classList.add('active');
+            }
+            
+            if (!dataLoaded || !plotDiv || !window.Plotly) return;
+            
+            // 根據模式更新 hovertemplate
+            var newHoverTemplate;
+            if (mode === 'x') {
+                // X Marker 模式：框內顯示 Y數值,框外顯示圖例名
+                newHoverTemplate = '%{y:.6f}<extra>%{fullData.name}</extra>';
+            } else if (mode === 'y') {
+                // Y Marker 模式：框內顯示 X數值,框外顯示圖例名
+                newHoverTemplate = '%{x:.6f}<extra>%{fullData.name}</extra>';
+            } else {
+                // 其他模式：顯示完整資訊
+                newHoverTemplate = '<b>%{fullData.name}</b><br>X: %{x:.4f}<br>Y: %{y:.4f}<extra></extra>';
+            }
+            
+            // 更新所有 traces 的 hovertemplate
+            if (currentTraces && currentTraces.length > 0) {
+                var traceUpdate = { hovertemplate: [] };
+                for (var i = 0; i < currentTraces.length; i++) {
+                    traceUpdate.hovertemplate.push(newHoverTemplate);
+                }
+                Plotly.restyle(plotDiv, traceUpdate);
+            }
+            
+            // 套用到圖表
+            var update = { hovermode: mode };
+            
+            // 根據模式設置 spike 線條
+            if (mode === 'x') {
+                // X Marker 模式：顯示垂直線
+                update['xaxis.showspikes'] = true;
+                update['xaxis.spikemode'] = 'across';
+                update['xaxis.spikesnap'] = 'cursor';
+                update['xaxis.spikecolor'] = '#4ecdc4';
+                update['xaxis.spikethickness'] = 2;
+                update['xaxis.spikedash'] = 'solid';
+                update['yaxis.showspikes'] = false;
+            } else if (mode === 'y') {
+                // Y Marker 模式：顯示水平線
+                update['yaxis.showspikes'] = true;
+                update['yaxis.spikemode'] = 'across';
+                update['yaxis.spikesnap'] = 'cursor';
+                update['yaxis.spikecolor'] = '#4ecdc4';
+                update['yaxis.spikethickness'] = 2;
+                update['yaxis.spikedash'] = 'solid';
+                update['xaxis.showspikes'] = false;
+            } else {
+                // 其他模式：關閉 spike 線條
+                update['xaxis.showspikes'] = false;
+                update['yaxis.showspikes'] = false;
+            }
+            
+            Plotly.relayout(plotDiv, update);
+        }
+
+        // 套用軸範圍
+        applyRange.addEventListener('click', () => {
+            if (dataLoaded) {
+                updatePlot();
+            }
+        });
+
+        // 重設軸範圍
+        resetRange.addEventListener('click', () => {
+            xMin.value = '';
+            xMax.value = '';
+            yMin.value = '';
+            yMax.value = '';
+            if (dataLoaded) {
+                updatePlot();
+            }
+        });
+
+        // 另存為 HTML 和 JPG
+        const saveHTMLBtn = document.getElementById('saveHTML');
+        const saveJPGBtn = document.getElementById('saveJPG');
+        const saveStatus = document.getElementById('saveStatus');
+        
+        saveHTMLBtn.addEventListener('click', () => {
+            if (!dataLoaded) {
+                updateSaveStatus('請先載入 CSV 檔案');
+                return;
+            }
+            saveAsNewHTML();
+        });
+
+        // 另存為 JPG
+        saveJPGBtn.addEventListener('click', () => {
+            if (!dataLoaded) {
+                updateSaveStatus('請先載入 CSV 檔案');
+                return;
+            }
+            saveAsJPG();
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileInfo.textContent = `已選擇: ${file.name}`;
+                fileInfo.classList.add('active');
+                
+                const fileName = file.name.replace(/\.[^/.]+$/, '');
+                originalFileName = fileName;
+                titleInput.value = fileName;
+                chartTitle.textContent = fileName;
+                chartTitle.style.display = 'inline-block';
+                
+                loadAndPlotCSV(file);
+            }
+        });
+
+        function loadAndPlotCSV(file) {
+            loading.classList.add('active');
+            errorDiv.classList.remove('active');
+            emptyState.style.display = 'none';
+
+            Papa.parse(file, {
+                complete: function(results) {
+                    try {
+                        plotData(results.data);
+                        loading.classList.remove('active');
+                        sidebar.classList.add('active');
+                    } catch (error) {
+                        showError('資料解析錯誤: ' + error.message);
+                        loading.classList.remove('active');
+                    }
+                },
+                error: function(error) {
+                    showError('檔案讀取錯誤: ' + error.message);
+                    loading.classList.remove('active');
+                },
+                skipEmptyLines: true,
+                encoding: 'CP1252'
+            });
+        }
+
+        function plotData(data) {
+            if (data.length < 2) {
+                throw new Error('CSV 檔案資料不足');
+            }
+
+            const headers = data[0].map(h => {
+                let header = h.trim();
+                header = header.replace(/£\[/g, 'Ω');
+                return header;
+            });
+            
+            const xLabel = headers[0];
+            const yAxisLabel = headers[headers.length - 1];
+            const yColumns = headers.slice(1, headers.length - 1);
+            
+            const xData = [];
+            const yDataSets = yColumns.map(() => []);
+            
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (row.length < 2) continue;
+                
+                const xValue = parseFloat(row[0]);
+                if (!isNaN(xValue)) {
+                    xData.push(xValue);
+                    
+                    for (let j = 0; j < yColumns.length; j++) {
+                        const yValue = parseFloat(row[j + 1]);
+                        yDataSets[j].push(isNaN(yValue) ? null : yValue);
+                    }
+                }
+            }
+            
+            currentTraces = yColumns.map((colName, idx) => {
+                // 檢查列名是否包含 "spec"（不區分大小寫）
+                const isSpec = colName.toLowerCase().includes('spec');
+                
+                return {
+                    x: xData,
+                    y: yDataSets[idx],
+                    mode: 'lines',
+                    name: colName,
+                    line: {
+                        width: 2,
+                        color: isSpec ? '#FF1493' : undefined,  // 深粉紅色 (DeepPink)
+                        dash: isSpec ? 'dash' : 'solid'         // 虛線或實線
+                    },
+                    hovertemplate: `<b>%{fullData.name}</b><br>X: %{x:.4f}<br>Y: %{y:.4f}<extra></extra>`
+                };
+            });
+            
+            currentLayout = {
+                xaxis: {
+                    title: {
+                        text: xLabel,
+                        font: {
+                            size: 14,
+                            color: '#333'
+                        }
+                    },
+                    type: currentXAxisType,  // 使用當前設定的座標軸類型
+                    dtick: currentXAxisType === 'log' ? 1 : null,  // 對數軸：主刻度在 10 的倍數
+                    exponentformat: currentXAxisType === 'log' ? 'power' : null,  // 對數軸：使用指數格式
+                    minor: currentXAxisType === 'log' ? {
+                        ticklen: 4,
+                        tickcolor: '#e0e0e0',
+                        showgrid: true,
+                        gridcolor: '#f0f0f0',
+                        gridwidth: 0.5
+                    } : null,
+                    showgrid: true,
+                    gridcolor: '#e0e0e0',
+                    showspikes: false,
+                    spikemode: 'across',
+                    spikesnap: 'cursor',
+                    spikecolor: '#4ecdc4',
+                    spikethickness: 2,
+                    spikedash: 'solid',
+                    domain: [0, 0.95]
+                },
+                yaxis: {
+                    title: {
+                        text: yAxisLabel,
+                        font: {
+                            size: 14,
+                            color: '#333'
+                        }
+                    },
+                    type: currentYAxisType,  // 使用當前設定的座標軸類型
+                    dtick: currentYAxisType === 'log' ? 1 : null,  // 對數軸：主刻度在 10 的倍數
+                    exponentformat: currentYAxisType === 'log' ? 'power' : null,  // 對數軸：使用指數格式
+                    minor: currentYAxisType === 'log' ? {
+                        ticklen: 4,
+                        tickcolor: '#e0e0e0',
+                        showgrid: true,
+                        gridcolor: '#f0f0f0',
+                        gridwidth: 0.5
+                    } : null,
+                    showgrid: true,
+                    gridcolor: '#e0e0e0',
+                    showspikes: false,
+                    spikemode: 'across',
+                    spikesnap: 'cursor',
+                    spikecolor: '#4ecdc4',
+                    spikethickness: 2,
+                    spikedash: 'solid'
+                },
+                hovermode: 'closest',
+                showlegend: true,
+                legend: {
+                    x: 1.02,
+                    y: 1,
+                    xanchor: 'left',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(255, 255, 255, 0.95)',
+                    bordercolor: '#ddd',
+                    borderwidth: 1,
+                    font: {
+                        size: 10,
+                        family: 'Arial, sans-serif'
+                    },
+                    orientation: 'v',
+                    traceorder: 'normal'
+                },
+                margin: {
+                    l: 70,
+                    r: 150,
+                    t: 40,
+                    b: 90
+                },
+                plot_bgcolor: '#fafafa',
+                paper_bgcolor: 'white',
+                autosize: true
+            };
+            
+            currentConfig = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['lasso2d', 'select2d']
+            };
+            
+            // 使用 newPlot 創建圖表
+            Plotly.newPlot(plotDiv, currentTraces, currentLayout, currentConfig).then(() => {
+                // 圖表創建完成後設置
+                dataLoaded = true;
+            });
+        }
+
+        // SI 單位前綴解析函數
+        function parseSIValue(input) {
+            if (!input) return NaN;
+
+            // 移除空白
+            const str = input.toString().trim();
+
+            // SI 單位前綴對照表
+            const siPrefixes = {
+                'm': 1e-3,   // milli
+                'u': 1e-6,   // micro
+                'n': 1e-9,   // nano
+                'p': 1e-12   // pico
+            };
+
+            // 嘗試匹配數字 + SI 單位格式 (例如: 1.5m, 500u, 2n)
+            const match = str.match(/^([+-]?[\d.]+(?:e[+-]?\d+)?)\s*([munp])$/i);
+
+            if (match) {
+                const number = parseFloat(match[1]);
+                const prefix = match[2].toLowerCase();
+
+                if (!isNaN(number) && siPrefixes[prefix]) {
+                    return number * siPrefixes[prefix];
+                }
+            }
+
+            // 如果沒有 SI 前綴，就當作普通數字解析
+            return parseFloat(str);
+        }
+
+        function updatePlot() {
+            if (!currentLayout || !currentTraces) return;
+            
+            const plotElement = document.getElementById('plotDiv');
+            if (!plotElement || !plotElement.layout) {
+                // 如果圖表還沒創建，先創建它
+                Plotly.newPlot(plotDiv, currentTraces, currentLayout, currentConfig);
+                return;
+            }
+
+            // 套用軸範圍 (X軸支援 SI 前綴)
+            const xMinVal = parseSIValue(xMin.value);
+            const xMaxVal = parseSIValue(xMax.value);
+            const yMinVal = parseFloat(yMin.value);
+            const yMaxVal = parseFloat(yMax.value);
+            
+            var updateObj = {};
+            
+            if (!isNaN(xMinVal) && !isNaN(xMaxVal)) {
+                updateObj['xaxis.range'] = [xMinVal, xMaxVal];
+                updateObj['xaxis.autorange'] = false;
+            } else {
+                updateObj['xaxis.autorange'] = true;
+            }
+            
+            if (!isNaN(yMinVal) && !isNaN(yMaxVal)) {
+                updateObj['yaxis.range'] = [yMinVal, yMaxVal];
+                updateObj['yaxis.autorange'] = false;
+            } else {
+                updateObj['yaxis.autorange'] = true;
+            }
+            
+            if (Object.keys(updateObj).length > 0) {
+                Plotly.relayout(plotDiv, updateObj);
+            }
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+            emptyState.style.display = 'flex';
+            chartTitle.style.display = 'none';
+        }
+
+        function updateSaveStatus(message) {
+            if (saveStatus) {
+                saveStatus.textContent = message;
+                setTimeout(() => {
+                    if (saveStatus.textContent === message) {
+                        saveStatus.textContent = '';
+                    }
+                }, 3000);
+            }
+        }
+
+        function saveAsJPG() {
+            try {
+                updateSaveStatus('正在生成 JPG 圖片...');
+                
+                // 準備檔名
+                const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,'-').replace('T','_');
+                const filename = `${originalFileName || 'chart'}_${timestamp}`;
+                
+                // 獲取當前標題
+                const currentTitle = chartTitle.textContent || originalFileName || '圖表';
+                
+                // 暫時添加標題到圖表
+                Plotly.relayout(plotDiv, {
+                    'title': {
+                        text: currentTitle,
+                        font: {
+                            size: 20,
+                            color: '#333',
+                            family: 'Arial, sans-serif'
+                        },
+                        x: 0.5,
+                        xanchor: 'center'
+                    }
+                }).then(() => {
+                    // 使用 Plotly 的 downloadImage 功能匯出 JPG
+                    return Plotly.downloadImage(plotDiv, {
+                        format: 'jpeg',
+                        width: 1280,
+                        height: 720,
+                        filename: filename
+                    });
+                }).then(() => {
+                    // 匯出完成後移除標題（恢復原狀）
+                    return Plotly.relayout(plotDiv, {
+                        'title': null
+                    });
+                }).then(() => {
+                    updateSaveStatus('JPG 圖片已成功保存：' + filename + '.jpeg');
+                }).catch((error) => {
+                    updateSaveStatus('保存 JPG 失敗：' + error.message);
+                    console.error('Error saving JPG:', error);
+                    // 發生錯誤也要移除標題
+                    Plotly.relayout(plotDiv, {'title': null});
+                });
+                
+            } catch (error) {
+                updateSaveStatus('保存 JPG 失敗：' + error.message);
+                console.error('Error saving JPG:', error);
+            }
+        }
+
+        function saveAsNewHTML() {
+            try {
+                updateSaveStatus('正在生成 HTML 檔案...');
+                
+                // 收集當前數據
+                const embeddedData = {
+                    traces: currentTraces,
+                    layout: currentLayout,
+                    config: currentConfig,
+                    fileName: originalFileName || '圖表'
+                };
+                
+                // 收集當前軸範圍設定
+                const plotElement = document.getElementById('plotDiv');
+                const embeddedRange = {
+                    xaxis: {
+                        range: plotElement && plotElement.layout && plotElement.layout.xaxis && plotElement.layout.xaxis.range 
+                            ? plotElement.layout.xaxis.range.slice() : null,
+                        autorange: plotElement && plotElement.layout && plotElement.layout.xaxis 
+                            ? (plotElement.layout.xaxis.autorange !== false) : true
+                    },
+                    yaxis: {
+                        range: plotElement && plotElement.layout && plotElement.layout.yaxis && plotElement.layout.yaxis.range 
+                            ? plotElement.layout.yaxis.range.slice() : null,
+                        autorange: plotElement && plotElement.layout && plotElement.layout.yaxis 
+                            ? (plotElement.layout.yaxis.autorange !== false) : true
+                    }
+                };
+                
+                // 收集座標軸類型設定
+                const embeddedAxisTypes = {
+                    xAxisType: currentXAxisType,
+                    yAxisType: currentYAxisType
+                };
+                
+                // 生成新的 HTML
+                const newHTML = generateHTMLWithEmbeddedData(embeddedData, embeddedRange, embeddedAxisTypes);
+                
+                // 下載檔案
+                const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,'-').replace('T','_');
+                const filename = `${originalFileName || 'chart'}_saved_${timestamp}.html`;
+                
+                const blob = new Blob([newHTML], {type: 'text/html;charset=utf-8'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                updateSaveStatus('檔案已成功保存：' + filename);
+                
+            } catch (error) {
+                updateSaveStatus('保存失敗：' + error.message);
+                console.error('Error saving HTML:', error);
+            }
+        }
+
+        function generateHTMLWithEmbeddedData(embeddedData, embeddedRange, embeddedAxisTypes) {
+            // 安全地序列化數據
+            const safeData = JSON.stringify(embeddedData, function(key, value) {
+                if (typeof value === 'function' || value === undefined) {
+                    return null;
+                }
+                return value;
+            }, 2);
+            
+            const safeRange = JSON.stringify(embeddedRange, function(key, value) {
+                if (typeof value === 'function' || value === undefined) {
+                    return null;
+                }
+                return value;
+            }, 2);
+            
+            const safeAxisTypes = JSON.stringify(embeddedAxisTypes, function(key, value) {
+                if (typeof value === 'function' || value === undefined) {
+                    return null;
+                }
+                return value;
+            }, 2);
+            
+            // 獲取當前 HTML 內容
+            let html = document.documentElement.outerHTML;
+            
+            // 建立要插入的 JavaScript 代碼
+            const dataScript = `
+        // === 嵌入的數據 ===
+        var embeddedChartData = ${safeData};
+        var embeddedAxisRange = ${safeRange};
+        var embeddedAxisTypes = ${safeAxisTypes};
+        var isEmbeddedVersion = true;
+
+        function loadEmbeddedData() {
+            if (!embeddedChartData) return;
+            
+            try {
+                currentTraces = embeddedChartData.traces;
+                currentLayout = embeddedChartData.layout;
+                currentConfig = embeddedChartData.config;
+                originalFileName = embeddedChartData.fileName || '圖表';
+                
+                // 載入座標軸類型設定
+                if (embeddedAxisTypes) {
+                    currentXAxisType = embeddedAxisTypes.xAxisType || 'linear';
+                    currentYAxisType = embeddedAxisTypes.yAxisType || 'linear';
+                    
+                    // 更新座標軸類型按鈕狀態
+                    if (currentXAxisType === 'log') {
+                        document.getElementById('xLinear').classList.remove('active');
+                        document.getElementById('xLog').classList.add('active');
+                    }
+                    if (currentYAxisType === 'log') {
+                        document.getElementById('yLinear').classList.remove('active');
+                        document.getElementById('yLog').classList.add('active');
+                    }
+                }
+                
+                // 設置標題
+                if (chartTitle && titleInput) {
+                    chartTitle.textContent = originalFileName;
+                    titleInput.value = originalFileName;
+                    chartTitle.style.display = 'inline-block';
+                }
+                
+                // 創建圖表
+                if (currentTraces && currentLayout && plotDiv) {
+                    Plotly.newPlot(plotDiv, currentTraces, currentLayout, currentConfig).then(() => {
+                        dataLoaded = true;
+                        sidebar.classList.add('active');
+                        emptyState.style.display = 'none';
+                        
+                        // 套用軸範圍
+                        if (embeddedAxisRange) {
+                            applyEmbeddedRange();
+                        }
+                        
+                        // 更新狀態
+                        fileInfo.textContent = '已載入嵌入的圖表數據：' + originalFileName;
+                        fileInfo.classList.add('active');
+                    });
+                }
+                
+            } catch (error) {
+                console.error('載入嵌入數據失敗:', error);
+                showError('載入嵌入數據失敗：' + error.message);
+            }
+        }
+
+        function applyEmbeddedRange() {
+            if (!embeddedAxisRange || !plotDiv || !window.Plotly) return;
+            
+            setTimeout(function() {
+                try {
+                    var updateObj = {};
+                    
+                    if (embeddedAxisRange.xaxis) {
+                        if (!embeddedAxisRange.xaxis.autorange && embeddedAxisRange.xaxis.range) {
+                            updateObj['xaxis.range'] = embeddedAxisRange.xaxis.range;
+                            updateObj['xaxis.autorange'] = false;
+                            
+                            // 更新輸入框
+                            if (xMin && xMax) {
+                                xMin.value = embeddedAxisRange.xaxis.range[0].toFixed(4);
+                                xMax.value = embeddedAxisRange.xaxis.range[1].toFixed(4);
+                            }
+                        }
+                    }
+                    
+                    if (embeddedAxisRange.yaxis) {
+                        if (!embeddedAxisRange.yaxis.autorange && embeddedAxisRange.yaxis.range) {
+                            updateObj['yaxis.range'] = embeddedAxisRange.yaxis.range;
+                            updateObj['yaxis.autorange'] = false;
+                            
+                            // 更新輸入框
+                            if (yMin && yMax) {
+                                yMin.value = embeddedAxisRange.yaxis.range[0].toFixed(4);
+                                yMax.value = embeddedAxisRange.yaxis.range[1].toFixed(4);
+                            }
+                        }
+                    }
+                    
+                    if (Object.keys(updateObj).length > 0) {
+                        Plotly.relayout(plotDiv, updateObj);
+                    }
+                    
+                } catch (error) {
+                    console.error('套用嵌入範圍失敗:', error);
+                }
+            }, 300);
+        }
+        // === 嵌入代碼結束 ===
+`;
+            
+            // 在 script 開始處插入數據腳本
+            const scriptPattern = /(<script>\s*)(const fileInput)/;
+            html = html.replace(scriptPattern, '$1' + dataScript + '\n        $2');
+            
+            // 在載入事件中添加自動載入邏輯
+            // 找到 fileInput.addEventListener('change' 之前，添加檢查
+            const fileInputPattern = /(fileInput\.addEventListener\('change',)/;
+            html = html.replace(fileInputPattern, 
+                '// 如果是嵌入版本，自動載入數據\n        if (typeof isEmbeddedVersion !== "undefined" && isEmbeddedVersion) {\n            loadEmbeddedData();\n        }\n\n        $1');
+            
+            return html;
+        }
+    </script>
+</body>
+</html>
