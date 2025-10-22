@@ -364,8 +364,8 @@
                     <div class="axis-control">
                         <label>X 軸範圍</label>
                         <div class="range-inputs">
-                            <input type="number" id="xMin" placeholder="最小值" step="any">
-                            <input type="number" id="xMax" placeholder="最大值" step="any">
+                            <input type="text" id="xMin" placeholder="最小值 (例: 1m, 500u, 1.5n)" step="any">
+                            <input type="text" id="xMax" placeholder="最大值 (例: 10m, 2u, 5n)" step="any">
                         </div>
                     </div>
                     <div class="axis-control">
@@ -738,6 +738,37 @@
             });
         }
 
+        // SI 單位前綴解析函數
+        function parseSIValue(input) {
+            if (!input) return NaN;
+
+            // 移除空白
+            const str = input.toString().trim();
+
+            // SI 單位前綴對照表
+            const siPrefixes = {
+                'm': 1e-3,   // milli
+                'u': 1e-6,   // micro
+                'n': 1e-9,   // nano
+                'p': 1e-12   // pico
+            };
+
+            // 嘗試匹配數字 + SI 單位格式 (例如: 1.5m, 500u, 2n)
+            const match = str.match(/^([+-]?[\d.]+(?:e[+-]?\d+)?)\s*([munp])$/i);
+
+            if (match) {
+                const number = parseFloat(match[1]);
+                const prefix = match[2].toLowerCase();
+
+                if (!isNaN(number) && siPrefixes[prefix]) {
+                    return number * siPrefixes[prefix];
+                }
+            }
+
+            // 如果沒有 SI 前綴，就當作普通數字解析
+            return parseFloat(str);
+        }
+
         function updatePlot() {
             if (!currentLayout || !currentTraces) return;
             
@@ -748,9 +779,9 @@
                 return;
             }
 
-            // 套用軸範圍
-            const xMinVal = parseFloat(xMin.value);
-            const xMaxVal = parseFloat(xMax.value);
+            // 套用軸範圍 (X軸支援 SI 前綴)
+            const xMinVal = parseSIValue(xMin.value);
+            const xMaxVal = parseSIValue(xMax.value);
             const yMinVal = parseFloat(yMin.value);
             const yMaxVal = parseFloat(yMax.value);
             
