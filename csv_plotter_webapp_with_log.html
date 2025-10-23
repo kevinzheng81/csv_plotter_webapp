@@ -446,7 +446,7 @@
         let currentConfig = null;
         let dataLoaded = false;
         let originalFileName = '';
-        let isEmbeddedVersion = false;
+        // isEmbeddedVersion 會在嵌入數據時設定
         let currentXAxisType = 'linear';  // 當前 X 軸類型
         let currentYAxisType = 'linear';  // 當前 Y 軸類型
 
@@ -1053,38 +1053,45 @@
         }
 
         function generateHTMLWithEmbeddedData(embeddedData, embeddedRange, embeddedAxisTypes) {
-            // 安全地序列化數據
-            const safeData = JSON.stringify(embeddedData, function(key, value) {
-                if (typeof value === 'function' || value === undefined) {
-                    return null;
-                }
-                return value;
-            }, 2);
-            
-            const safeRange = JSON.stringify(embeddedRange, function(key, value) {
-                if (typeof value === 'function' || value === undefined) {
-                    return null;
-                }
-                return value;
-            }, 2);
-            
-            const safeAxisTypes = JSON.stringify(embeddedAxisTypes, function(key, value) {
-                if (typeof value === 'function' || value === undefined) {
-                    return null;
-                }
-                return value;
-            }, 2);
-            
-            // 獲取當前 HTML 內容
-            let html = document.documentElement.outerHTML;
-            
-            // 建立要插入的 JavaScript 代碼
-            const dataScript = `
+            try {
+                // 安全地序列化數據
+                const safeData = JSON.stringify(embeddedData, function(key, value) {
+                    if (typeof value === 'function' || value === undefined) {
+                        return null;
+                    }
+                    return value;
+                }, 2);
+                
+                const safeRange = JSON.stringify(embeddedRange, function(key, value) {
+                    if (typeof value === 'function' || value === undefined) {
+                        return null;
+                    }
+                    return value;
+                }, 2);
+                
+                const safeAxisTypes = JSON.stringify(embeddedAxisTypes, function(key, value) {
+                    if (typeof value === 'function' || value === undefined) {
+                        return null;
+                    }
+                    return value;
+                }, 2);
+                
+                // 獲取當前 HTML 內容
+                let html = document.documentElement.outerHTML;
+                
+                // 步驟 1: 移除所有舊的嵌入數據區塊（如果存在）
+                html = html.replace(/\/\/ === 嵌入的數據 ===[\s\S]*?\/\/ === 嵌入代碼結束 ===\s*/g, '');
+                
+                // 步驟 2: 移除舊的自動載入邏輯（如果存在）
+                html = html.replace(/\/\/ 自動載入嵌入數據[\s\S]*?if \(typeof embeddedChartData[^}]+}\s*/g, '');
+                
+                // 步驟 3: 建立要插入的 JavaScript 代碼
+                const dataScript = `
         // === 嵌入的數據 ===
-        var embeddedChartData = ${safeData};
-        var embeddedAxisRange = ${safeRange};
-        var embeddedAxisTypes = ${safeAxisTypes};
-        var isEmbeddedVersion = true;
+        let embeddedChartData = ${safeData};
+        let embeddedAxisRange = ${safeRange};
+        let embeddedAxisTypes = ${safeAxisTypes};
+        let isEmbeddedVersion = true;
 
         function loadEmbeddedData() {
             if (!embeddedChartData) return;
@@ -1101,29 +1108,39 @@
                     currentYAxisType = embeddedAxisTypes.yAxisType || 'linear';
                     
                     // 更新座標軸類型按鈕狀態
+                    const xLinearBtn = document.getElementById('xLinear');
+                    const xLogBtn = document.getElementById('xLog');
+                    const yLinearBtn = document.getElementById('yLinear');
+                    const yLogBtn = document.getElementById('yLog');
+                    
                     if (currentXAxisType === 'log') {
-                        document.getElementById('xLinear').classList.remove('active');
-                        document.getElementById('xLog').classList.add('active');
+                        if (xLinearBtn) xLinearBtn.classList.remove('active');
+                        if (xLogBtn) xLogBtn.classList.add('active');
                     }
                     if (currentYAxisType === 'log') {
-                        document.getElementById('yLinear').classList.remove('active');
-                        document.getElementById('yLog').classList.add('active');
+                        if (yLinearBtn) yLinearBtn.classList.remove('active');
+                        if (yLogBtn) yLogBtn.classList.add('active');
                     }
                 }
                 
                 // 設置標題
-                if (chartTitle && titleInput) {
-                    chartTitle.textContent = originalFileName;
-                    titleInput.value = originalFileName;
-                    chartTitle.style.display = 'inline-block';
+                const chartTitleElem = document.getElementById('chartTitle');
+                const titleInputElem = document.getElementById('titleInput');
+                if (chartTitleElem && titleInputElem) {
+                    chartTitleElem.textContent = originalFileName;
+                    titleInputElem.value = originalFileName;
+                    chartTitleElem.style.display = 'inline-block';
                 }
                 
                 // 創建圖表
-                if (currentTraces && currentLayout && plotDiv) {
-                    Plotly.newPlot(plotDiv, currentTraces, currentLayout, currentConfig).then(() => {
+                const plotDivElem = document.getElementById('plotDiv');
+                if (currentTraces && currentLayout && plotDivElem) {
+                    Plotly.newPlot(plotDivElem, currentTraces, currentLayout, currentConfig).then(() => {
                         dataLoaded = true;
-                        sidebar.classList.add('active');
-                        emptyState.style.display = 'none';
+                        const sidebarElem = document.getElementById('sidebar');
+                        const emptyStateElem = document.getElementById('emptyState');
+                        if (sidebarElem) sidebarElem.classList.add('active');
+                        if (emptyStateElem) emptyStateElem.style.display = 'none';
                         
                         // 套用軸範圍
                         if (embeddedAxisRange) {
@@ -1131,33 +1148,43 @@
                         }
                         
                         // 更新狀態
-                        fileInfo.textContent = '已載入嵌入的圖表數據：' + originalFileName;
-                        fileInfo.classList.add('active');
+                        const fileInfoElem = document.getElementById('fileInfo');
+                        if (fileInfoElem) {
+                            fileInfoElem.textContent = '已載入嵌入的圖表數據：' + originalFileName;
+                            fileInfoElem.classList.add('active');
+                        }
                     });
                 }
                 
             } catch (error) {
                 console.error('載入嵌入數據失敗:', error);
-                showError('載入嵌入數據失敗：' + error.message);
+                if (typeof showError !== 'undefined') {
+                    showError('載入嵌入數據失敗：' + error.message);
+                }
             }
         }
 
         function applyEmbeddedRange() {
-            if (!embeddedAxisRange || !plotDiv || !window.Plotly) return;
+            if (!embeddedAxisRange) return;
+            const plotDivElem = document.getElementById('plotDiv');
+            if (!plotDivElem || !window.Plotly) return;
             
             setTimeout(function() {
                 try {
-                    var updateObj = {};
+                    const updateObj = {};
+                    const xMinElem = document.getElementById('xMin');
+                    const xMaxElem = document.getElementById('xMax');
+                    const yMinElem = document.getElementById('yMin');
+                    const yMaxElem = document.getElementById('yMax');
                     
                     if (embeddedAxisRange.xaxis) {
                         if (!embeddedAxisRange.xaxis.autorange && embeddedAxisRange.xaxis.range) {
                             updateObj['xaxis.range'] = embeddedAxisRange.xaxis.range;
                             updateObj['xaxis.autorange'] = false;
                             
-                            // 更新輸入框
-                            if (xMin && xMax) {
-                                xMin.value = embeddedAxisRange.xaxis.range[0].toFixed(4);
-                                xMax.value = embeddedAxisRange.xaxis.range[1].toFixed(4);
+                            if (xMinElem && xMaxElem) {
+                                xMinElem.value = embeddedAxisRange.xaxis.range[0].toFixed(4);
+                                xMaxElem.value = embeddedAxisRange.xaxis.range[1].toFixed(4);
                             }
                         }
                     }
@@ -1167,16 +1194,15 @@
                             updateObj['yaxis.range'] = embeddedAxisRange.yaxis.range;
                             updateObj['yaxis.autorange'] = false;
                             
-                            // 更新輸入框
-                            if (yMin && yMax) {
-                                yMin.value = embeddedAxisRange.yaxis.range[0].toFixed(4);
-                                yMax.value = embeddedAxisRange.yaxis.range[1].toFixed(4);
+                            if (yMinElem && yMaxElem) {
+                                yMinElem.value = embeddedAxisRange.yaxis.range[0].toFixed(4);
+                                yMaxElem.value = embeddedAxisRange.yaxis.range[1].toFixed(4);
                             }
                         }
                     }
                     
                     if (Object.keys(updateObj).length > 0) {
-                        Plotly.relayout(plotDiv, updateObj);
+                        Plotly.relayout(plotDivElem, updateObj);
                     }
                     
                 } catch (error) {
@@ -1184,20 +1210,35 @@
                 }
             }, 300);
         }
+        
+        // 自動載入嵌入數據
+        if (typeof embeddedChartData !== 'undefined' && embeddedChartData) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', loadEmbeddedData);
+            } else {
+                loadEmbeddedData();
+            }
+        }
         // === 嵌入代碼結束 ===
 `;
-            
-            // 在 script 開始處插入數據腳本
-            const scriptPattern = /(<script>\s*)(const fileInput)/;
-            html = html.replace(scriptPattern, '$1' + dataScript + '\n        $2');
-            
-            // 在載入事件中添加自動載入邏輯
-            // 找到 fileInput.addEventListener('change' 之前，添加檢查
-            const fileInputPattern = /(fileInput\.addEventListener\('change',)/;
-            html = html.replace(fileInputPattern, 
-                '// 如果是嵌入版本，自動載入數據\n        if (typeof isEmbeddedVersion !== "undefined" && isEmbeddedVersion) {\n            loadEmbeddedData();\n        }\n\n        $1');
-            
-            return html;
+                
+                // 步驟 4: 在第一個 <script> 標籤後插入數據腳本
+                const scriptStartPattern = /(<script>\s*)(const fileInput|let currentLayout)/;
+                const match = html.match(scriptStartPattern);
+                
+                if (match) {
+                    html = html.replace(scriptStartPattern, '$1' + dataScript + '\n        $2');
+                } else {
+                    console.error('找不到插入點');
+                    throw new Error('無法找到合適的腳本插入位置');
+                }
+                
+                return html;
+                
+            } catch (error) {
+                console.error('生成 HTML 時發生錯誤:', error);
+                throw error;
+            }
         }
     </script>
 </body>
