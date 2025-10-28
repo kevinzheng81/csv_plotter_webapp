@@ -34,11 +34,36 @@
             color: white;
             padding: 20px 30px;
             text-align: center;
+            position: relative;
         }
         
         .header h1 {
             font-size: 2em;
             margin-bottom: 0;
+        }
+
+        .help-button {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .help-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) scale(1.1);
         }
         
         .controls {
@@ -307,6 +332,141 @@
             display: block;
         }
 
+        /* Modal 樣式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2em;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease;
+        }
+
+        .close-button:hover {
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 30px;
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .help-section {
+            margin-bottom: 25px;
+        }
+
+        .help-section h3 {
+            color: #667eea;
+            font-size: 1.2em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .help-section p {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .help-section ul {
+            margin-left: 20px;
+            color: #555;
+        }
+
+        .help-section li {
+            margin-bottom: 8px;
+        }
+
+        .help-section code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+            font-size: 0.9em;
+        }
+
+        .highlight-box {
+            background: #f0f5ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .highlight-box strong {
+            color: #667eea;
+        }
+
         @media (max-width: 1024px) {
             .main-content {
                 flex-direction: column;
@@ -318,6 +478,16 @@
             .chart-container {
                 max-width: 100%;
             }
+            .modal-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+            .help-button {
+                right: 15px;
+                width: 35px;
+                height: 35px;
+                font-size: 1.3em;
+            }
         }
     </style>
 </head>
@@ -325,6 +495,7 @@
     <div class="container">
         <div class="header">
             <h1>📊 CSV 資料圖表顯示器</h1>
+            <button class="help-button" onclick="openHelpModal()" title="使用說明">❓</button>
         </div>
         
         <div class="controls">
@@ -403,6 +574,97 @@
         </div>
     </div>
 
+    <!-- 使用說明 Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📚 使用說明</h2>
+                <button class="close-button" onclick="closeHelpModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h3>📁 CSV 檔案格式要求</h3>
+                    <p>CSV 檔案應包含：</p>
+                    <ul>
+                        <li>第一列為標題列（表頭）</li>
+                        <li>第一欄為 X 軸數據</li>
+                        <li>中間欄位為各條曲線的 Y 軸數據</li>
+                        <li>最後一欄為 Y 軸的單位標籤</li>
+                    </ul>
+                    <div class="highlight-box">
+                        <strong>特殊功能：</strong>如果欄位名稱包含 "spec"（不區分大小寫），該曲線將顯示為<strong>深粉紅色虛線</strong>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>📤 如何上傳檔案</h3>
+                    <p>點擊「📁 選擇 CSV 檔案」按鈕，選擇您的 CSV 檔案即可自動載入並繪製圖表。</p>
+                </div>
+
+                <div class="help-section">
+                    <h3>✏️ 編輯圖表標題</h3>
+                    <p><strong>雙擊</strong>圖表上方的標題即可進行編輯，按 Enter 或點擊其他地方完成編輯。</p>
+                </div>
+
+                <div class="help-section">
+                    <h3>🎯 滑鼠懸停模式</h3>
+                    <ul>
+                        <li><strong>最近數據：</strong>顯示游標最近的數據點資訊</li>
+                        <li><strong>X Marker：</strong>顯示垂直參考線和 Y 值</li>
+                        <li><strong>Y Marker：</strong>顯示水平參考線和 X 值</li>
+                        <li><strong>關閉懸停：</strong>不顯示懸停資訊</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>📏 調整座標軸範圍</h3>
+                    <p><strong>X 軸</strong>支援 SI 單位前綴輸入：</p>
+                    <ul>
+                        <li><code>G</code> = 10⁹ (Giga)</li>
+                        <li><code>M</code> = 10⁶ (Mega)</li>
+                        <li><code>k</code> = 10³ (kilo)</li>
+                        <li><code>m</code> = 10⁻³ (milli)</li>
+                        <li><code>u</code> = 10⁻⁶ (micro)</li>
+                        <li><code>n</code> = 10⁻⁹ (nano)</li>
+                        <li><code>p</code> = 10⁻¹² (pico)</li>
+                    </ul>
+                    <div class="highlight-box">
+                        <strong>範例：</strong>輸入 <code>1m</code> 表示 0.001，輸入 <code>500u</code> 表示 0.0005
+                    </div>
+                    <p>輸入數值後點擊「套用範圍」按鈕，或點擊「重設範圍」恢復自動調整。</p>
+                </div>
+
+                <div class="help-section">
+                    <h3>💾 儲存圖表</h3>
+                    <ul>
+                        <li><strong>另存為 HTML：</strong>將圖表和當前設定儲存為獨立的 HTML 檔案，可以直接用瀏覽器開啟並保留互動功能</li>
+                        <li><strong>另存為 JPG：</strong>將圖表匯出為靜態圖片（1280x720 解析度），適合報告或文件使用</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>🖱️ 圖表互動功能</h3>
+                    <p>Plotly 提供了豐富的互動功能：</p>
+                    <ul>
+                        <li><strong>縮放：</strong>用滑鼠拖曳選取區域進行縮放</li>
+                        <li><strong>平移：</strong>按住並拖曳圖表進行平移</li>
+                        <li><strong>重設視圖：</strong>雙擊圖表恢復初始視圖</li>
+                        <li><strong>顯示/隱藏曲線：</strong>點擊右側圖例中的項目</li>
+                        <li><strong>工具列：</strong>滑鼠移到圖表上方會顯示縮放、平移、儲存等工具</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>💡 小提示</h3>
+                    <ul>
+                        <li>儲存的 HTML 檔案會嵌入所有數據和設定，可離線使用</li>
+                        <li>JPG 匯出會自動加上您設定的圖表標題</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('fileInfo');
@@ -428,6 +690,29 @@
         let dataLoaded = false;
         let originalFileName = '';
         // isEmbeddedVersion 會在嵌入數據時設定
+
+        // Modal 控制函數
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 點擊 Modal 背景關閉
+        document.getElementById('helpModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHelpModal();
+            }
+        });
+
+        // ESC 鍵關閉 Modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeHelpModal();
+            }
+        });
 
         // 標題編輯功能
         chartTitle.addEventListener('dblclick', function() {
@@ -742,29 +1027,30 @@
         function parseSIValue(input) {
             if (!input) return NaN;
 
-            // 移除空白
             const str = input.toString().trim();
 
             // SI 單位前綴對照表
             const siPrefixes = {
+                'G': 1e9,    // Giga
+                'M': 1e6,    // Mega
+                'k': 1e3,    // kilo
                 'm': 1e-3,   // milli
                 'u': 1e-6,   // micro
                 'n': 1e-9,   // nano
                 'p': 1e-12   // pico
             };
 
-            // 嘗試匹配數字 + SI 單位格式 (例如: 1.5m, 500u, 2n)
-            const match = str.match(/^([+-]?[\d.]+(?:e[+-]?\d+)?)\s*([munp])$/i);
+            // 匹配所有 SI 前綴（大小寫敏感）
+            const match = str.match(/^([+-]?[\d.]+(?:e[+-]?\d+)?)\s*([GMkmunp])$/);
 
             if (match) {
                 const number = parseFloat(match[1]);
-                const prefix = match[2].toLowerCase();
+                const prefix = match[2];  // 不轉換大小寫
 
                 if (!isNaN(number) && siPrefixes[prefix]) {
                     return number * siPrefixes[prefix];
                 }
             }
-
             // 如果沒有 SI 前綴，就當作普通數字解析
             return parseFloat(str);
         }
