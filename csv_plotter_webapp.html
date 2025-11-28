@@ -171,6 +171,8 @@
             padding: 20px;
             border-right: 1px solid #dee2e6;
             display: none;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
         }
 
         .sidebar.active {
@@ -330,6 +332,63 @@
         
         .error.active {
             display: block;
+        }
+
+        /* Marker 表格樣式 */
+        .marker-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .marker-table th {
+            background-color: #007acc;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #005a9e;
+            font-size: 13px;
+        }
+        .marker-table td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-size: 12px;
+        }
+        .marker-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .marker-table tr:hover {
+            background-color: #f0f8ff;
+        }
+        .marker-header-cell {
+            font-weight: bold;
+            vertical-align: middle;
+        }
+        .marker-delete-btn {
+            padding: 4px 8px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .marker-delete-btn:hover {
+            background-color: #c82333;
+        }
+
+        /* Marker 容器 */
+        #markerTableContainer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 2px solid #667eea;
+        }
+        #markerTableContainer h3 {
+            color: #333;
+            margin-bottom: 15px;
         }
 
         /* Modal 樣式 */
@@ -572,6 +631,28 @@
                 </div>
             </div>
         </div>
+
+        <!-- Marker 數值表區域 -->
+        <div id="markerTableContainer" style="margin-top: 30px; border-top: 2px solid #667eea; padding-top: 20px; padding-left: 30px; padding-right: 30px; padding-bottom: 20px;">
+            <h3 style="color: #333; margin-bottom: 15px;">固定 Marker 數值表</h3>
+            
+            <!-- 批量輸入 Marker 區域 -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #dee2e6;">
+                <h4 style="color: #333; margin-top: 0; margin-bottom: 10px; font-size: 14px;">批量新增 Marker</h4>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="batchMarkerInput" placeholder="例如: X:10,20,30 或 Y:-10,-20,-30" 
+                           style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 3px; font-size: 13px;">
+                    <button onclick="addBatchMarkers()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; white-space: nowrap;">新增 Marker</button>
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: 5px;">
+                    格式說明：輸入 "X:值1,值2,值3" 新增 X Marker，或 "Y:值1,值2,值3" 新增 Y Marker
+                </div>
+            </div>
+            
+            <div id="markerTableContent" style="overflow-x: auto;">
+                <div style="color: #666; font-size: 14px; padding: 20px; text-align: center;">尚未新增任何 Marker</div>
+            </div>
+        </div>
     </div>
 
     <!-- 使用說明 Modal -->
@@ -594,6 +675,31 @@
                     <div class="highlight-box">
                         <strong>特殊功能：</strong>如果欄位名稱包含 "spec"（不區分大小寫），該曲線將顯示為<strong>深粉紅色虛線</strong>
                     </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>📍 固定 Marker 功能</h3>
+                    <p><strong>點擊圖表</strong>可以固定 Marker 標記：</p>
+                    <ul>
+                        <li><strong>普通點擊：</strong>移除現有 marker 或添加新 marker</li>
+                        <li><strong>Ctrl+點擊：</strong>不移除現有 marker，直接添加新 marker</li>
+                        <li><strong>X Marker：</strong>紅色垂直線，顯示各曲線在該 X 位置的 Y 值</li>
+                        <li><strong>Y Marker：</strong>藍綠色水平線，顯示各曲線通過該 Y 值的 X 位置</li>
+                    </ul>
+                    <div class="highlight-box">
+                        <strong>批量新增：</strong>可在表格上方輸入框中輸入 "X:10,20,30" 或 "Y:-10,-20,-30" 批量新增多個 marker
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>📊 Marker 數值表</h3>
+                    <p>固定 marker 後，底部會顯示數值表：</p>
+                    <ul>
+                        <li><strong>雙擊位置：</strong>可以編輯 marker 的位置數值</li>
+                        <li><strong>排序切換：</strong>點擊表格標題右側的排序按鈕可切換排序模式（大→小、小→大、圖例順序）</li>
+                        <li><strong>刪除 marker：</strong>點擊紅色刪除按鈕</li>
+                        <li>表格顯示所有曲線在 marker 位置的數值</li>
+                    </ul>
                 </div>
 
                 <div class="help-section">
@@ -659,6 +765,7 @@
                     <ul>
                         <li>儲存的 HTML 檔案會嵌入所有數據和設定，可離線使用</li>
                         <li>JPG 匯出會自動加上您設定的圖表標題</li>
+                        <li>使用 Ctrl+點擊可以同時保留多個 marker 進行對比</li>
                     </ul>
                 </div>
             </div>
@@ -689,7 +796,12 @@
         let currentConfig = null;
         let dataLoaded = false;
         let originalFileName = '';
-        // isEmbeddedVersion 會在嵌入數據時設定
+        
+        // Marker 相關全域變數
+        var fixedMarkers = {}; // 儲存所有固定的 marker
+        var markerMode = 'x'; // 當前 marker 模式: 'x' 或 'y'
+        var markerIdCounter = 0; // Marker ID 計數器
+        var globalSortMode = 'legend'; // 全域排序模式: 'desc', 'asc', 'legend' - 預設為圖例順序
 
         // Modal 控制函數
         function openHelpModal() {
@@ -752,8 +864,10 @@
                 document.getElementById('hoverClosest').classList.add('active');
             } else if (mode === 'x') {
                 document.getElementById('hoverX').classList.add('active');
+                markerMode = 'x'; // 同步更新 marker 模式
             } else if (mode === 'y') {
                 document.getElementById('hoverY').classList.add('active');
+                markerMode = 'y'; // 同步更新 marker 模式
             } else {
                 document.getElementById('hoverFalse').classList.add('active');
             }
@@ -763,13 +877,10 @@
             // 根據模式更新 hovertemplate
             var newHoverTemplate;
             if (mode === 'x') {
-                // X Marker 模式：框內顯示 Y數值,框外顯示圖例名
                 newHoverTemplate = '%{y:.6f}<extra>%{fullData.name}</extra>';
             } else if (mode === 'y') {
-                // Y Marker 模式：框內顯示 X數值,框外顯示圖例名
                 newHoverTemplate = '%{x:.6f}<extra>%{fullData.name}</extra>';
             } else {
-                // 其他模式：顯示完整資訊
                 newHoverTemplate = '<b>%{fullData.name}</b><br>X: %{x:.4f}<br>Y: %{y:.4f}<extra></extra>';
             }
             
@@ -787,7 +898,6 @@
             
             // 根據模式設置 spike 線條
             if (mode === 'x') {
-                // X Marker 模式：顯示垂直線
                 update['xaxis.showspikes'] = true;
                 update['xaxis.spikemode'] = 'across';
                 update['xaxis.spikesnap'] = 'cursor';
@@ -796,7 +906,6 @@
                 update['xaxis.spikedash'] = 'solid';
                 update['yaxis.showspikes'] = false;
             } else if (mode === 'y') {
-                // Y Marker 模式：顯示水平線
                 update['yaxis.showspikes'] = true;
                 update['yaxis.spikemode'] = 'across';
                 update['yaxis.spikesnap'] = 'cursor';
@@ -805,7 +914,6 @@
                 update['yaxis.spikedash'] = 'solid';
                 update['xaxis.showspikes'] = false;
             } else {
-                // 其他模式：關閉 spike 線條
                 update['xaxis.showspikes'] = false;
                 update['yaxis.showspikes'] = false;
             }
@@ -844,7 +952,6 @@
             saveAsNewHTML();
         });
 
-        // 另存為 JPG
         saveJPGBtn.addEventListener('click', () => {
             if (!dataLoaded) {
                 updateSaveStatus('請先載入 CSV 檔案');
@@ -928,7 +1035,6 @@
             }
             
             currentTraces = yColumns.map((colName, idx) => {
-                // 檢查列名是否包含 "spec"（不區分大小寫）
                 const isSpec = colName.toLowerCase().includes('spec');
                 
                 return {
@@ -938,8 +1044,8 @@
                     name: colName,
                     line: {
                         width: 2,
-                        color: isSpec ? '#FF1493' : undefined,  // 深粉紅色 (DeepPink)
-                        dash: isSpec ? 'dash' : 'solid'         // 虛線或實線
+                        color: isSpec ? '#FF1493' : undefined,
+                        dash: isSpec ? 'dash' : 'solid'
                     },
                     hovertemplate: `<b>%{fullData.name}</b><br>X: %{x:.4f}<br>Y: %{y:.4f}<extra></extra>`
                 };
@@ -1016,12 +1122,483 @@
                 modeBarButtonsToRemove: ['lasso2d', 'select2d']
             };
             
-            // 使用 newPlot 創建圖表
             Plotly.newPlot(plotDiv, currentTraces, currentLayout, currentConfig).then(() => {
-                // 圖表創建完成後設置
                 dataLoaded = true;
+                setupMarkerClickListeners();
             });
         }
+
+        // ========== Marker 功能開始 ==========
+        
+        // 切換固定 marker
+        function toggleFixedMarker(x, y, ctrlKey) {
+            var plotElement = document.getElementById('plotDiv');
+            if (!plotElement) return;
+            
+            // 如果沒有按 Ctrl 鍵，檢查是否需要移除現有的同類型 marker
+            if (!ctrlKey) {
+                // 找出該模式的所有 marker
+                var markersToRemove = [];
+                for (var key in fixedMarkers) {
+                    var marker = fixedMarkers[key];
+                    if (marker.mode === markerMode) {
+                        markersToRemove.push(marker);
+                    }
+                }
+                
+                // 如果有現有的 marker，全部移除
+                if (markersToRemove.length > 0) {
+                    removeMultipleMarkers(markersToRemove);
+                    return;
+                }
+            }
+            
+            // 添加新的固定 marker
+            addFixedMarker(x, y, markerMode);
+        }
+        
+        // 一次性移除多個 marker（避免索引問題）
+        function removeMultipleMarkers(markersToRemove) {
+            var plotElement = document.getElementById('plotDiv');
+            if (!plotElement || markersToRemove.length === 0) return;
+            
+            // 清空所有 shapes 和 annotations
+            Plotly.relayout('plotDiv', {
+                shapes: [],
+                annotations: []
+            });
+            
+            // 清除所有 marker 記錄
+            for (var i = 0; i < markersToRemove.length; i++) {
+                delete fixedMarkers[markersToRemove[i].id];
+            }
+            
+            // 重新添加剩餘的 marker
+            var remainingMarkers = [];
+            for (var key in fixedMarkers) {
+                remainingMarkers.push(fixedMarkers[key]);
+            }
+            
+            // 清空記錄
+            fixedMarkers = {};
+            
+            // 重新添加
+            for (var i = 0; i < remainingMarkers.length; i++) {
+                var m = remainingMarkers[i];
+                addFixedMarker(m.x, m.y, m.mode);
+            }
+            
+            // 更新表格
+            updateMarkerTable();
+        }
+        
+        // 添加固定 marker
+        function addFixedMarker(x, y, mode) {
+            var plotElement = document.getElementById('plotDiv');
+            if (!plotElement) return;
+            
+            var currentLayout = plotElement.layout;
+            var shapes = currentLayout.shapes || [];
+            var annotations = currentLayout.annotations || [];
+            
+            var originalShapesCount = shapes.length;
+            var originalAnnotationsCount = annotations.length;
+            
+            // 生成唯一 ID
+            var markerId = 'marker_' + markerIdCounter++;
+            
+            // 準備數據點陣列
+            var dataPoints = [];
+            
+            if (mode === 'x') {
+                // X Marker：紅色垂直線
+                shapes.push({
+                    type: 'line',
+                    x0: x,
+                    x1: x,
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    line: {
+                        color: '#ff6b6b',
+                        width: 2,
+                        dash: 'solid'
+                    }
+                });
+                
+                // 添加 X 座標標註
+                annotations.push({
+                    x: x,
+                    y: 1,
+                    yref: 'paper',
+                    text: 'X: ' + x.toFixed(3),
+                    showarrow: false,
+                    bgcolor: 'rgba(255, 107, 107, 0.8)',
+                    font: { color: 'white', size: 10 },
+                    xanchor: 'center',
+                    yanchor: 'bottom'
+                });
+                
+                // 找出所有曲線在 X 位置的 Y 值
+                for (var i = 0; i < currentTraces.length; i++) {
+                    var trace = currentTraces[i];
+                    if (trace.name.toLowerCase().includes('spec') || trace.visible === 'legendonly') {
+                        continue;
+                    }
+                    
+                    var closest = findClosestPoint(trace.x, trace.y, x, 'x');
+                    if (closest) {
+                        dataPoints.push({
+                            name: trace.name,
+                            x: closest.x,
+                            y: closest.y,
+                            color: trace.line.color || '#1f77b4'
+                        });
+                    }
+                }
+                
+            } else {
+                // Y Marker：藍綠色水平線
+                shapes.push({
+                    type: 'line',
+                    x0: 0,
+                    x1: 1,
+                    xref: 'paper',
+                    y0: y,
+                    y1: y,
+                    line: {
+                        color: '#4ecdc4',
+                        width: 2,
+                        dash: 'solid'
+                    }
+                });
+                
+                // 添加 Y 座標標註
+                annotations.push({
+                    x: 1,
+                    xref: 'paper',
+                    y: y,
+                    text: 'Y: ' + y.toFixed(3),
+                    showarrow: false,
+                    bgcolor: 'rgba(78, 205, 196, 0.8)',
+                    font: { color: 'white', size: 10 },
+                    xanchor: 'left',
+                    yanchor: 'middle'
+                });
+                
+                // 找出所有曲線通過 Y 位置的 X 值
+                for (var i = 0; i < currentTraces.length; i++) {
+                    var trace = currentTraces[i];
+                    if (trace.name.toLowerCase().includes('spec') || trace.visible === 'legendonly') {
+                        continue;
+                    }
+                    
+                    var closest = findClosestPoint(trace.x, trace.y, y, 'y');
+                    if (closest) {
+                        dataPoints.push({
+                            name: trace.name,
+                            x: closest.x,
+                            y: closest.y,
+                            color: trace.line.color || '#1f77b4'
+                        });
+                    }
+                }
+            }
+            
+            // 更新圖表
+            Plotly.relayout('plotDiv', {
+                shapes: shapes,
+                annotations: annotations
+            });
+            
+            // 記錄固定狀態
+            fixedMarkers[markerId] = {
+                id: markerId,
+                x: x,
+                y: y,
+                mode: mode,
+                dataPoints: dataPoints,
+                shapesCount: originalShapesCount,
+                annotationsCount: originalAnnotationsCount
+            };
+            
+            // 更新表格
+            updateMarkerTable();
+        }
+        
+        // 找最接近的點
+        function findClosestPoint(xData, yData, targetValue, axis) {
+            var minDiff = Infinity;
+            var closestIndex = -1;
+            
+            if (axis === 'x') {
+                for (var i = 0; i < xData.length; i++) {
+                    var diff = Math.abs(xData[i] - targetValue);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestIndex = i;
+                    }
+                }
+            } else {
+                for (var i = 0; i < yData.length; i++) {
+                    var diff = Math.abs(yData[i] - targetValue);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestIndex = i;
+                    }
+                }
+            }
+            
+            if (closestIndex >= 0) {
+                return {
+                    x: xData[closestIndex],
+                    y: yData[closestIndex]
+                };
+            }
+            return null;
+        }
+        
+        // 移除單個 marker
+        function removeFixedMarkerById(markerId) {
+            if (!fixedMarkers[markerId]) return;
+            
+            var marker = fixedMarkers[markerId];
+            
+            // 從記錄中刪除這個 marker
+            delete fixedMarkers[markerId];
+            
+            // 完全重建所有 marker
+            rebuildPlotMarkers();
+            
+            // 更新表格
+            updateMarkerTable();
+        }
+        
+        // 重建圖表的所有 marker
+        function rebuildPlotMarkers() {
+            var plotElement = document.getElementById('plotDiv');
+            if (!plotElement) return;
+            
+            // 收集所有 marker
+            var allMarkers = [];
+            for (var key in fixedMarkers) {
+                allMarkers.push(fixedMarkers[key]);
+            }
+            
+            // 清空所有 shapes 和 annotations
+            Plotly.relayout('plotDiv', {
+                shapes: [],
+                annotations: []
+            });
+            
+            // 清除所有 marker 記錄
+            fixedMarkers = {};
+            
+            // 重新添加所有 marker
+            for (var i = 0; i < allMarkers.length; i++) {
+                var m = allMarkers[i];
+                addFixedMarker(m.x, m.y, m.mode);
+            }
+        }
+        
+        // 更新 Marker 表格
+        function updateMarkerTable() {
+            var markerKeys = Object.keys(fixedMarkers);
+            var tableContent = document.getElementById('markerTableContent');
+            
+            // 如果沒有 marker，顯示提示訊息
+            if (markerKeys.length === 0) {
+                tableContent.innerHTML = '<div style="color: #666; font-size: 14px; padding: 20px; text-align: center;">尚未新增任何 Marker</div>';
+                return;
+            }
+            
+            // 排序模式圖示
+            var sortIcon = '';
+            if (globalSortMode === 'desc') {
+                sortIcon = '↓ 大→小';
+            } else if (globalSortMode === 'asc') {
+                sortIcon = '↑ 小→大';
+            } else {
+                sortIcon = '= 圖例順序';
+            }
+            
+            // 生成表格 HTML
+            var html = '';
+            
+            var markers = markerKeys.map(key => fixedMarkers[key]);
+            
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">';
+            html += '<h4 style="color: #667eea; margin: 0;">數值表</h4>';
+            html += '<button style="padding: 6px 12px; background-color: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;" onclick="toggleGlobalSortMode()" onmouseover="this.style.backgroundColor=\'#138496\'" onmouseout="this.style.backgroundColor=\'#17a2b8\'" title="切換排序模式">' + sortIcon + '</button>';
+            html += '</div>';
+            
+            html += '<table class="marker-table">';
+            html += '<thead><tr>';
+            html += '<th style="width: 80px;">Marker</th>';
+            html += '<th style="width: 100px;">位置<br><span style="font-size: 10px; font-weight: normal;">(雙擊編輯)</span></th>';
+            html += '<th style="width: 200px;">曲線名稱</th>';
+            html += '<th style="width: 120px;">數值</th>';
+            html += '<th style="width: 80px;">操作</th>';
+            html += '</tr></thead><tbody>';
+            
+            for (var i = 0; i < markers.length; i++) {
+                var marker = markers[i];
+                var markerLabel = marker.mode === 'x' ? 'X Marker' : 'Y Marker';
+                var markerColor = marker.mode === 'x' ? '#ff6b6b' : '#4ecdc4';
+                var positionValue = marker.mode === 'x' ? marker.x.toFixed(3) : marker.y.toFixed(3);
+                
+                // 根據全域排序模式排序數據點
+                var sortedDataPoints = sortDataPoints(marker.dataPoints, marker.mode, globalSortMode);
+                
+                for (var j = 0; j < sortedDataPoints.length; j++) {
+                    var point = sortedDataPoints[j];
+                    var valueToShow = marker.mode === 'x' ? point.y.toFixed(3) : point.x.toFixed(3);
+                    
+                    html += '<tr>';
+                    if (j === 0) {
+                        html += '<td rowspan="' + sortedDataPoints.length + '" class="marker-header-cell" style="background-color: ' + markerColor + '; color: white; text-align: center;">' + markerLabel + '</td>';
+                        html += '<td rowspan="' + sortedDataPoints.length + '" class="marker-header-cell" style="text-align: center; cursor: pointer;" ondblclick="editMarkerPosition(\'' + marker.id + '\')" title="雙擊編輯位置">' + positionValue + '</td>';
+                    }
+                    html += '<td style="border-left: 3px solid ' + point.color + ';">' + point.name + '</td>';
+                    html += '<td style="font-family: monospace; font-weight: bold;">' + valueToShow + '</td>';
+                    if (j === 0) {
+                        html += '<td rowspan="' + sortedDataPoints.length + '" style="text-align: center;">';
+                        html += '<button class="marker-delete-btn" onclick="removeFixedMarkerById(\'' + marker.id + '\')">刪除</button>';
+                        html += '</td>';
+                    }
+                    html += '</tr>';
+                }
+                
+                // 在每個 marker 後添加分隔行（除了最後一個）
+                if (i < markers.length - 1) {
+                    html += '<tr class="marker-separator"><td colspan="5" style="height: 3px; background-color: #333; padding: 0;"></td></tr>';
+                }
+            }
+            
+            html += '</tbody></table>';
+            
+            tableContent.innerHTML = html;
+        }
+        
+        // 根據排序模式排序數據點
+        function sortDataPoints(dataPoints, mode, sortMode) {
+            var sorted = dataPoints.slice();
+            
+            if (sortMode === 'desc') {
+                if (mode === 'x') {
+                    sorted.sort(function(a, b) { return b.y - a.y; });
+                } else {
+                    sorted.sort(function(a, b) { return b.x - a.x; });
+                }
+            } else if (sortMode === 'asc') {
+                if (mode === 'x') {
+                    sorted.sort(function(a, b) { return a.y - b.y; });
+                } else {
+                    sorted.sort(function(a, b) { return a.x - b.x; });
+                }
+            }
+            
+            return sorted;
+        }
+        
+        // 切換全域排序模式
+        function toggleGlobalSortMode() {
+            if (globalSortMode === 'desc') {
+                globalSortMode = 'asc';
+            } else if (globalSortMode === 'asc') {
+                globalSortMode = 'legend';
+            } else {
+                globalSortMode = 'desc';
+            }
+            
+            updateMarkerTable();
+        }
+        
+        // 編輯 Marker 位置
+        function editMarkerPosition(markerId) {
+            var marker = fixedMarkers[markerId];
+            if (!marker) return;
+            
+            var currentValue = marker.mode === 'x' ? marker.x : marker.y;
+            var newValue = prompt('請輸入新的位置值：', currentValue.toFixed(3));
+            
+            if (newValue === null || newValue === '') return;
+            
+            newValue = parseFloat(newValue);
+            if (isNaN(newValue)) {
+                alert('請輸入有效的數字');
+                return;
+            }
+            
+            var mode = marker.mode;
+            
+            removeFixedMarkerById(markerId);
+            
+            if (mode === 'x') {
+                addFixedMarker(newValue, 0, mode);
+            } else {
+                addFixedMarker(0, newValue, mode);
+            }
+        }
+        
+        // 批量新增 Marker
+        function addBatchMarkers() {
+            var input = document.getElementById('batchMarkerInput');
+            var inputValue = input.value.trim();
+            
+            if (!inputValue) {
+                alert('請輸入要新增的 Marker 位置');
+                return;
+            }
+            
+            var match = inputValue.match(/^([XYxy])\s*:\s*(.+)$/);
+            if (!match) {
+                alert('格式錯誤！請使用格式：X:值1,值2,值3 或 Y:值1,值2,值3');
+                return;
+            }
+            
+            var mode = match[1].toLowerCase();
+            var valuesStr = match[2];
+            var values = valuesStr.split(',').map(function(v) { return parseFloat(v.trim()); });
+            
+            var invalidValues = values.filter(function(v) { return isNaN(v); });
+            if (invalidValues.length > 0) {
+                alert('包含無效的數字值');
+                return;
+            }
+            
+            for (var i = 0; i < values.length; i++) {
+                if (mode === 'x') {
+                    addFixedMarker(values[i], 0, 'x');
+                } else {
+                    addFixedMarker(0, values[i], 'y');
+                }
+            }
+            
+            input.value = '';
+            alert('成功新增 ' + values.length + ' 個 ' + mode.toUpperCase() + ' Marker');
+        }
+        
+        // 設置點擊事件監聽器
+        function setupMarkerClickListeners() {
+            var plotElement = document.getElementById('plotDiv');
+            if (!plotElement) return;
+            
+            plotElement.on('plotly_click', function(data) {
+                if (data.points && data.points.length > 0) {
+                    var point = data.points[0];
+                    var x = point.x;
+                    var y = point.y;
+                    
+                    // 檢測是否按下 Ctrl 鍵（或 Mac 的 Command 鍵）
+                    var ctrlKey = data.event.ctrlKey || data.event.metaKey;
+                    
+                    toggleFixedMarker(x, y, ctrlKey);
+                }
+            });
+        }
+        
+        // ========== Marker 功能結束 ==========
 
         // SI 單位前綴解析函數
         function parseSIValue(input) {
@@ -1029,29 +1606,26 @@
 
             const str = input.toString().trim();
 
-            // SI 單位前綴對照表
             const siPrefixes = {
-                'G': 1e9,    // Giga
-                'M': 1e6,    // Mega
-                'k': 1e3,    // kilo
-                'm': 1e-3,   // milli
-                'u': 1e-6,   // micro
-                'n': 1e-9,   // nano
-                'p': 1e-12   // pico
+                'G': 1e9,
+                'M': 1e6,
+                'k': 1e3,
+                'm': 1e-3,
+                'u': 1e-6,
+                'n': 1e-9,
+                'p': 1e-12
             };
 
-            // 匹配所有 SI 前綴（大小寫敏感）
             const match = str.match(/^([+-]?[\d.]+(?:e[+-]?\d+)?)\s*([GMkmunp])$/);
 
             if (match) {
                 const number = parseFloat(match[1]);
-                const prefix = match[2];  // 不轉換大小寫
+                const prefix = match[2];
 
                 if (!isNaN(number) && siPrefixes[prefix]) {
                     return number * siPrefixes[prefix];
                 }
             }
-            // 如果沒有 SI 前綴，就當作普通數字解析
             return parseFloat(str);
         }
 
@@ -1060,12 +1634,10 @@
             
             const plotElement = document.getElementById('plotDiv');
             if (!plotElement || !plotElement.layout) {
-                // 如果圖表還沒創建，先創建它
                 Plotly.newPlot(plotDiv, currentTraces, currentLayout, currentConfig);
                 return;
             }
 
-            // 套用軸範圍 (X軸支援 SI 前綴)
             const xMinVal = parseSIValue(xMin.value);
             const xMaxVal = parseSIValue(xMax.value);
             const yMinVal = parseFloat(yMin.value);
@@ -1114,14 +1686,10 @@
             try {
                 updateSaveStatus('正在生成 JPG 圖片...');
                 
-                // 準備檔名
                 const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,'-').replace('T','_');
                 const filename = `${originalFileName || 'chart'}_${timestamp}`;
-                
-                // 獲取當前標題
                 const currentTitle = chartTitle.textContent || originalFileName || '圖表';
                 
-                // 暫時添加標題到圖表
                 Plotly.relayout(plotDiv, {
                     'title': {
                         text: currentTitle,
@@ -1134,7 +1702,6 @@
                         xanchor: 'center'
                     }
                 }).then(() => {
-                    // 使用 Plotly 的 downloadImage 功能匯出 JPG
                     return Plotly.downloadImage(plotDiv, {
                         format: 'jpeg',
                         width: 1280,
@@ -1142,7 +1709,6 @@
                         filename: filename
                     });
                 }).then(() => {
-                    // 匯出完成後移除標題（恢復原狀）
                     return Plotly.relayout(plotDiv, {
                         'title': null
                     });
@@ -1151,7 +1717,6 @@
                 }).catch((error) => {
                     updateSaveStatus('保存 JPG 失敗：' + error.message);
                     console.error('Error saving JPG:', error);
-                    // 發生錯誤也要移除標題
                     Plotly.relayout(plotDiv, {'title': null});
                 });
                 
@@ -1165,15 +1730,16 @@
             try {
                 updateSaveStatus('正在生成 HTML 檔案...');
                 
-                // 收集當前數據
                 const embeddedData = {
                     traces: currentTraces,
                     layout: currentLayout,
                     config: currentConfig,
-                    fileName: originalFileName || '圖表'
+                    fileName: originalFileName || '圖表',
+                    markers: fixedMarkers,
+                    globalSortMode: globalSortMode,
+                    markerIdCounter: markerIdCounter
                 };
                 
-                // 收集當前軸範圍設定
                 const plotElement = document.getElementById('plotDiv');
                 const embeddedRange = {
                     xaxis: {
@@ -1190,10 +1756,8 @@
                     }
                 };
                 
-                // 生成新的 HTML
                 const newHTML = generateHTMLWithEmbeddedData(embeddedData, embeddedRange);
                 
-                // 下載檔案
                 const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,'-').replace('T','_');
                 const filename = `${originalFileName || 'chart'}_saved_${timestamp}.html`;
                 
@@ -1217,7 +1781,6 @@
 
         function generateHTMLWithEmbeddedData(embeddedData, embeddedRange) {
             try {
-                // 安全地序列化數據
                 const safeData = JSON.stringify(embeddedData, function(key, value) {
                     if (typeof value === 'function' || value === undefined) {
                         return null;
@@ -1232,17 +1795,11 @@
                     return value;
                 }, 2);
                 
-                // 獲取當前 HTML 內容
                 let html = document.documentElement.outerHTML;
                 
-                // 步驟 1: 移除所有舊的嵌入數據區塊（如果存在）
-                // 使用更精確的匹配模式
                 html = html.replace(/\/\/ === 嵌入的數據 ===[\s\S]*?\/\/ === 嵌入代碼結束 ===\s*/g, '');
-                
-                // 步驟 2: 移除舊的自動載入邏輯（如果存在）
                 html = html.replace(/\/\/ 自動載入嵌入數據[\s\S]*?if \(typeof embeddedChartData[^}]+}\s*/g, '');
                 
-                // 步驟 3: 建立要插入的 JavaScript 代碼
                 const dataScript = `
         // === 嵌入的數據 ===
         let embeddedChartData = ${safeData};
@@ -1258,7 +1815,17 @@
                 currentConfig = embeddedChartData.config;
                 originalFileName = embeddedChartData.fileName || '圖表';
                 
-                // 設置標題
+                // 恢復 marker 數據
+                if (embeddedChartData.markers) {
+                    fixedMarkers = embeddedChartData.markers;
+                }
+                if (embeddedChartData.globalSortMode) {
+                    globalSortMode = embeddedChartData.globalSortMode;
+                }
+                if (embeddedChartData.markerIdCounter) {
+                    markerIdCounter = embeddedChartData.markerIdCounter;
+                }
+                
                 const chartTitleElem = document.getElementById('chartTitle');
                 const titleInputElem = document.getElementById('titleInput');
                 if (chartTitleElem && titleInputElem) {
@@ -1267,7 +1834,6 @@
                     chartTitleElem.style.display = 'inline-block';
                 }
                 
-                // 創建圖表
                 const plotDivElem = document.getElementById('plotDiv');
                 if (currentTraces && currentLayout && plotDivElem) {
                     Plotly.newPlot(plotDivElem, currentTraces, currentLayout, currentConfig).then(() => {
@@ -1277,12 +1843,18 @@
                         if (sidebarElem) sidebarElem.classList.add('active');
                         if (emptyStateElem) emptyStateElem.style.display = 'none';
                         
-                        // 套用軸範圍
+                        // 設置 marker 點擊監聽器
+                        setupMarkerClickListeners();
+                        
+                        // 恢復 markers
+                        if (fixedMarkers && Object.keys(fixedMarkers).length > 0) {
+                            rebuildPlotMarkers();
+                        }
+                        
                         if (embeddedAxisRange) {
                             applyEmbeddedRange();
                         }
                         
-                        // 更新狀態
                         const fileInfoElem = document.getElementById('fileInfo');
                         if (fileInfoElem) {
                             fileInfoElem.textContent = '已載入嵌入的圖表數據：' + originalFileName;
@@ -1346,7 +1918,6 @@
             }, 300);
         }
         
-        // 自動載入嵌入數據
         if (typeof embeddedChartData !== 'undefined' && embeddedChartData) {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', loadEmbeddedData);
@@ -1357,9 +1928,7 @@
         // === 嵌入代碼結束 ===
 `;
                 
-                // 步驟 4: 在第一個 <script> 標籤後插入數據腳本
-                // 尋找主要的 script 標籤（不是外部庫）
-                const scriptStartPattern = /(<script>\s*)(const fileInput|let currentLayout)/;
+                const scriptStartPattern = /(<script>\s*)(const fileInput|let currentLayout|var fixedMarkers)/;
                 const match = html.match(scriptStartPattern);
                 
                 if (match) {
